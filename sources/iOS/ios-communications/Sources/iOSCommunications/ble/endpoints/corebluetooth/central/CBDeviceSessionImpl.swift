@@ -4,14 +4,14 @@ import CoreBluetooth
 import RxSwift
 
 class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeTransportProtocol {
-    var peripheral: CBPeripheral
-    let central: CBCentralManager
-    let scanner: CBScanningProtocol
-    var serviceMonitors = AtomicList<RxObserver<CBUUID>>()
-    var serviceCount = AtomicInteger.init(initialValue: 0)
-    var attNotifyQueue = [CBCharacteristic]()
-    let queueBle: DispatchQueue
-    let queue: DispatchQueue
+    private(set) var peripheral: CBPeripheral
+    private let central: CBCentralManager
+    private let scanner: CBScanningProtocol
+    private var serviceMonitors = AtomicList<RxObserver<CBUUID>>()
+    private var serviceCount = AtomicInteger.init(initialValue: 0)
+    private var attNotifyQueue = [CBCharacteristic]()
+    private let queueBle: DispatchQueue
+    private let queue: DispatchQueue
     
     // non nil if there is pending write to be finished. Write can be completed by disposing the disposable.
     fileprivate var pendingPeripheralWrite:Disposable? = nil
@@ -23,7 +23,7 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
          scanner: CBScanningProtocol,
          factory: BleGattClientFactory,
          queueBle: DispatchQueue,
-         queue: DispatchQueue){
+         queue: DispatchQueue) {
         self.peripheral = peripheral
         self.scanner = scanner
         self.central = central
@@ -108,7 +108,9 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
             if self.isConnected() {
                 if self.peripheral.services != nil &&
                     self.peripheral.services?.count != 0 &&
-                    self.serviceCount.get() >= (self.peripheral.services?.count)!  {
+                    self.serviceCount.get() >= (self.peripheral.services?.count)!
+                    
+                {
                     for service in (self.peripheral.services)! {
                         observer.onNext(service.uuid)
                     }
@@ -266,11 +268,11 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
         self.peripheral.discoverServices(nil)
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
         // implement if needed
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         BleLogger.trace_if_error("didDiscoverServices: ", error: error)
         if error == nil {
             // BIG NOTE peripheral.maximumWriteValueLengthForType(CBCharacteristicWriteType.WithResponse) returns incorrect mtu!
@@ -284,8 +286,14 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
             if let services = peripheral.services {
                 for service in services {
                     BleLogger.trace("service discovered: ",service.uuid.description)
-                    fetchGattClient(service.uuid)?.setServiceDiscovered(true, serviceUuid: service.uuid)
-                    peripheral.discoverCharacteristics(nil, for: service)
+                    fetchGattClient(service.uuid)?.setServiceDiscovered(true)
+                    
+                    if(service.characteristics == nil || service.characteristics?.count == 0 ) {
+                        peripheral.discoverCharacteristics(nil, for: service)
+                    } else {
+                        BleLogger.trace("Using cached characteristics")
+                        self.peripheral(peripheral, didDiscoverCharacteristicsFor: service, error: nil)
+                    }
                 }
             } else {
                 BleLogger.error("No services present")
@@ -296,12 +304,12 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverIncludedServicesFor service: CBService, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverIncludedServicesFor service: CBService, error: Error?) {
         // implement if needed
         BleLogger.trace("didDiscoverIncludedServicesForService")
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         BleLogger.trace_if_error("didDiscoverCharacteristicsForService: ", error: error)
         if error == nil {
             ++serviceCount
@@ -310,14 +318,28 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
                     for chr in chrs {
                         if client.containsCharacteristic(chr.uuid) {
                             client.processCharacteristicDiscovered(chr.uuid, properties: chr.properties.rawValue)
+                            
                             if client.containsNotifyCharacteristic(chr.uuid) {
-                                attNotifyQueue.append(chr)
-                                if attNotifyQueue.count == 1 {
-                                    self.sendNextAttNotify(false)
+                                if(chr.isNotifying) {
+                                    // Characteristics is already in notifying state, fake the "notifyDescriptorWritten"
+                                    BleLogger.trace("Notify characteristics already enabled")
+                                    client.notifyDescriptorWritten(chr.uuid, enabled: true, err: 0)
+                                } else {
+                                    attNotifyQueue.append(chr)
+                                    if attNotifyQueue.count == 1 {
+                                        self.sendNextAttNotify(false, enableNotify: true)
+                                    }
                                 }
                             }
+                            
                             if client.containsReadCharacteristic(chr.uuid) {
-                                peripheral.readValue(for: chr)
+                                if chr.value?.isEmpty ?? true {
+                                    peripheral.readValue(for: chr)
+                                } else {
+                                    // Characteristics value is already known, fake the "didUpdateValueFor" call
+                                    BleLogger.trace("Characteristics value already known")
+                                    self.peripheral(peripheral, didUpdateValueFor: chr, error: nil)
+                                }
                             }
                         }
                     }
@@ -336,7 +358,7 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         BleLogger.trace_if_error("didUpdateValueFor: ", error: error)
         if let serviceUuid = characteristic.service?.uuid, let client = fetchGattClient(serviceUuid) {
             if client.containsCharacteristic(characteristic.uuid) {
@@ -347,7 +369,7 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         BleLogger.trace_if_error("didWriteValueForCharacteristic: ", error: error)
         if let serviceUuid = characteristic.service?.uuid, let client = fetchGattClient(serviceUuid) {
             if client.containsCharacteristic(characteristic.uuid) {
@@ -376,17 +398,17 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
         sendNextAttNotify(true)
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverDescriptorsFor characteristic: CBCharacteristic, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverDescriptorsFor characteristic: CBCharacteristic, error: Error?) {
         // implement if needed
         BleLogger.trace("didDiscoverDescriptorsForCharacteristic")
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
         // implement if needed
         BleLogger.trace("didUpdateValueForDescriptor")
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor descriptor: CBDescriptor, error: Error?){
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor descriptor: CBDescriptor, error: Error?) {
         // implement if needed
         BleLogger.trace("didWriteValueForDescriptor")
     }
@@ -398,6 +420,6 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
     }
 }
 
-func == (lhs: CBDeviceSessionImpl, rhs: CBDeviceSessionImpl) -> Bool{
+func == (lhs: CBDeviceSessionImpl, rhs: CBDeviceSessionImpl) -> Bool {
     return lhs === rhs
 }
