@@ -198,7 +198,7 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
                                     onError: { error in
                                         BleLogger.trace("write failed: \(error)")
                                     })
-                        }
+                                    }
                     } else {
                         throw BleGattException.gattCharacteristicError
                     }
@@ -274,33 +274,37 @@ class CBDeviceSessionImpl: BleDeviceSession, CBPeripheralDelegate, BleAttributeT
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         BleLogger.trace_if_error("didDiscoverServices: ", error: error)
-        if error == nil {
-            // BIG NOTE peripheral.maximumWriteValueLengthForType(CBCharacteristicWriteType.WithResponse) returns incorrect mtu!
-            let mtu = peripheral.maximumWriteValueLength(for: CBCharacteristicWriteType.withoutResponse)
-            BleLogger.trace("MTU SIZE(WithoutResponse): \(mtu)")
-            if mtu > 0 {
-                for client in gattClients {
-                    client.setMtu(mtu)
-                }
-            }
-            if let services = peripheral.services {
-                for service in services {
-                    BleLogger.trace("service discovered: ",service.uuid.description)
-                    fetchGattClient(service.uuid)?.setServiceDiscovered(true)
-                    
-                    if(service.characteristics == nil || service.characteristics?.count == 0 ) {
-                        peripheral.discoverCharacteristics(nil, for: service)
-                    } else {
-                        BleLogger.trace("Using cached characteristics")
-                        self.peripheral(peripheral, didDiscoverCharacteristicsFor: service, error: nil)
-                    }
-                }
-            } else {
-                BleLogger.error("No services present")
-                RxUtils.postErrorAndClearList(serviceMonitors, error: BleGattException.gattServicesNotFound)
-            }
-        } else {
+        
+        guard error == nil else {
             RxUtils.postErrorAndClearList(serviceMonitors, error: error!)
+            return
+        }
+        
+        guard let services = peripheral.services else {
+            BleLogger.error("No services present")
+            RxUtils.postErrorAndClearList(serviceMonitors, error: BleGattException.gattServicesNotFound)
+            return
+        }
+        
+        // BIG NOTE peripheral.maximumWriteValueLengthForType(CBCharacteristicWriteType.WithResponse) returns incorrect mtu!
+        let mtu = peripheral.maximumWriteValueLength(for: CBCharacteristicWriteType.withoutResponse)
+        BleLogger.trace("MTU SIZE(WithoutResponse): \(mtu)")
+        if mtu > 0 {
+            for client in gattClients {
+                client.setMtu(mtu)
+            }
+        }
+        
+        for service in services {
+            BleLogger.trace("service discovered: ",service.uuid.description)
+            fetchGattClient(service.uuid)?.setServiceDiscovered(true)
+            
+            if(service.characteristics == nil || service.characteristics?.count == 0 ) {
+                peripheral.discoverCharacteristics(nil, for: service)
+            } else {
+                BleLogger.trace("Using cached characteristics")
+                self.peripheral(peripheral, didDiscoverCharacteristicsFor: service, error: nil)
+            }
         }
     }
     

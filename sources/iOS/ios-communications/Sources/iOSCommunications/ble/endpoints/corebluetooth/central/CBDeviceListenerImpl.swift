@@ -122,25 +122,26 @@ public class CBDeviceListenerImpl: NSObject, CBCentralManagerDelegate {
         })
     }
     
-    // TODO, testaa jos toinen applikaatio pitää yhteyttä
-    // TODO, mitä tapahtuu jos yhteys katkaistaan
     public func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {
         BleLogger.trace("CentralManager state restored")
         
-        if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? Array<CBPeripheral>  {
-            for peripheral in peripherals {
-                var session = self.session(peripheral)
-                if session == nil {
-                    self.sessions.append(CBDeviceSessionImpl(peripheral: peripheral, central: central, scanner: self, factory: self.factory, queueBle: self.queueBle, queue: self.queue))
-                }
-                
-                if let device = self.session(peripheral) {
-                    device.connected()
-                    self.updateSessionState(device,state: BleDeviceSession.DeviceSessionState.sessionOpen)
-                } else {
-                    BleLogger.error("out of memory")
-                    return
-                }
+        guard let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? Array<CBPeripheral> else {
+            BleLogger.trace("CentralManager state restored, but no connected peripherals")
+            return
+        }
+        
+        for peripheral in peripherals {
+            let session = self.session(peripheral)
+            if session == nil {
+                self.sessions.append(CBDeviceSessionImpl(peripheral: peripheral, central: central, scanner: self, factory: self.factory, queueBle: self.queueBle, queue: self.queue))
+            }
+            
+            if let device = self.session(peripheral) {
+                device.connected()
+                self.updateSessionState(device,state: BleDeviceSession.DeviceSessionState.sessionOpen)
+            } else {
+                BleLogger.error("out of memory")
+                return
             }
         }
     }
