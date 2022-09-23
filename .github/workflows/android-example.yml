@@ -29,9 +29,9 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x ./examples/example-android/androidBleSdkTestApp/gradlew
     - name: init Gradle
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
-    - name: Build with Gradle
       run: ./examples/example-android/androidBleSdkTestApp/gradlew init
+    - name: Build with Gradle
+      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
 
 #    # Set Current Date As Env Variable
 #    - name: Set current date as env variable
