@@ -30,8 +30,6 @@ jobs:
       run: chmod +x ./examples/example-android/androidBleSdkTestApp/gradlew
     - name: init Gradle
       run: ./examples/example-android/androidBleSdkTestApp/gradlew init
-    - name: Build with Gradle
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
 
 #    # Set Current Date As Env Variable
 #    - name: Set current date as env variable
@@ -48,10 +46,10 @@ jobs:
 #
 #    - name: Change wrapper permissions
 #      run: chmod +x ./gradlew
-
-    # Run Tests Build
-    - name: Run gradle tests
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew test
+#
+#    # Run Tests Build
+#    - name: Run gradle tests
+#      run: ./examples/example-android/androidBleSdkTestApp/gradlew test
 
     # Run Build Project
     - name: Build gradle project
