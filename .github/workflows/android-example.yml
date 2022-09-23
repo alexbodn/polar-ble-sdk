@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       level:
+        description: something
         type: boolean
         required: false
 
