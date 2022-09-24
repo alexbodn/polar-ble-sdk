@@ -55,9 +55,12 @@ jobs:
 #      run: ./examples/example-android/androidBleSdkTestApp/gradlew test
 
     # Run Build Project
-    - name: Build gradle project
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
+    - name: wrapper gradle project
+      run: ./examples/example-android/androidBleSdkTestApp/gradlew wrapper
 
+#    - name: Build gradle project
+#      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
+#
 #    # Create APK Debug
 #    - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
 #      run: ./examples/example-android/androidBleSdkTestApp/gradlew assembleDebug
