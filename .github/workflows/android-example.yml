@@ -29,6 +29,12 @@ jobs:
     - name: Gradle tasks
       run: ./examples/example-android/androidBleSdkTestApp/gradlew tasks
 
+    - name: Gradle projects
+      run: ./examples/example-android/androidBleSdkTestApp/gradlew projects
+
+    - name: Gradle properties
+      run: ./examples/example-android/androidBleSdkTestApp/gradlew properties
+
 #    # Set Current Date As Env Variable
 #    - name: Set current date as env variable
 #      run: echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
@@ -50,9 +56,6 @@ jobs:
 #      run: ./examples/example-android/androidBleSdkTestApp/gradlew test
 
     # Run Build Project
-    - name: wrapper gradle project
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew wrapper
-
 #    - name: Build gradle project
 #      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
 #
