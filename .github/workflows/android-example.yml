@@ -5,12 +5,7 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
-  workflow_dispatch:
-    inputs:
-      level:
-        description: something
-        type: boolean
-        required: false
+  workflow_dispatch: # on button click
 
 jobs:
   build:
