@@ -28,6 +28,9 @@ jobs:
 
     - name: Gradle build
       run: ./examples/example-android/androidBleSdkTestApp/gradlew -p ./examples/example-android/androidBleSdkTestApp build
+      
+    - name: explore output
+      run: ls -lR ./examples/example-android/androidBleSdkTestApp
 
 #    # Set Current Date As Env Variable
 #    - name: Set current date as env variable
