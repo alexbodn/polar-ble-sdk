@@ -31,7 +31,9 @@ jobs:
       
     - name: explore output
       run: ls -lR ./examples/example-android/androidBleSdkTestApp
+    - name: list jar contents
       run: unzip -l ./examples/example-android/androidBleSdkTestApp/gradle/wrapper/gradle-wrapper.jar
+    - name: jar properties
       run: cat ./examples/example-android/androidBleSdkTestApp/gradle/wrapper/gradle-wrapper.properties
 
 #    # Set Current Date As Env Variable
