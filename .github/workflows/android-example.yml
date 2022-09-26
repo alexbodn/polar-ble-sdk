@@ -14,6 +14,27 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    
+    # Set Current Date As Env Variable
+    - name: Set current date as env variable
+      run: echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+    # set playstore_name variable
+    - name: set playstore_name variable
+      run: echo "playstore_name=playstore_name" >> $GITHUB_ENV
+
+    # Set Repository Name As Env Variable
+    - name: Set repository name as env variable
+      run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
+
+    # set location of project
+    - name: set location of project
+      run: echo "proj_loc=./examples/example-android/androidBleSdkTestApp" >> $GITHUB_ENV
+    
+    # set main project module
+    - name: set main_project_module
+      run: echo "main_project_module=${{ env.proj_loc }}/app" >> @GITHUB_ENV
+
     - name: set up JDK 11
       uses: actions/setup-java@v3
       with:
@@ -22,73 +43,58 @@ jobs:
         cache: gradle
 
     - name: Grant execute permission for gradlew
-      run: chmod +x ./examples/example-android/androidBleSdkTestApp/gradlew
+      run: chmod +x ${{ env.proj_loc }}/gradlew
+
     - name: init Gradle
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew -p ./examples/example-android/androidBleSdkTestApp init
+      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} init
 
     - name: Gradle build
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew -p ./examples/example-android/androidBleSdkTestApp build
+      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} build
       
-    - name: explore output
-      run: ls -lR ./examples/example-android/androidBleSdkTestApp
+#    - name: explore output
+#      run: ls -lR ${{ env.proj_loc }}
+      
     - name: find apk files
-      run: find ./examples/example-android/androidBleSdkTestApp -name "*apk*"
-    - name: list jar contents
-      run: unzip -l ./examples/example-android/androidBleSdkTestApp/gradle/wrapper/gradle-wrapper.jar
-    - name: jar properties
-      run: cat ./examples/example-android/androidBleSdkTestApp/gradle/wrapper/gradle-wrapper.properties
+      run: find ${{ env.proj_loc }} -name "*apk*"
 
-#    # Set Current Date As Env Variable
-#    - name: Set current date as env variable
-#      run: echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-#
-#    # Set Repository Name As Env Variable
-#    - name: Set repository name as env variable
-#      run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
-#
-#    - name: Set Up JDK
-#      uses: actions/setup-java@v1
-#      with:
-#        java-version: 11
-#
 #    - name: Change wrapper permissions
-#      run: chmod +x ./gradlew
-#
+#      run: chmod +x ${{ env.proj_loc }}/gradlew
+
 #    # Run Tests Build
 #    - name: Run gradle tests
-#      run: ./examples/example-android/androidBleSdkTestApp/gradlew test
+#      run: ${{ env.proj_loc }}/gradlew -P ${{ env.proj_loc }} test
 
     # Run Build Project
 #    - name: Build gradle project
 #      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
-#
+
 #    # Create APK Debug
 #    - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
-#      run: ./examples/example-android/androidBleSdkTestApp/gradlew assembleDebug
-#
+#      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} assembleDebug
+
 #    # Create APK Release
 #    - name: Build apk release project (APK) - ${{ env.main_project_module }} module
-#      run: ./examples/example-android/androidBleSdkTestApp/gradlew assemble
-#
+#      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} assemble
+
 #    # Create Bundle AAB Release
 #    # Noted for main module build [main_project_module]:bundleRelease
 #    - name: Build app bundle release (AAB) - ${{ env.main_project_module }} module
-#      run: ./gradlew ${{ env.main_project_module }}:bundleRelease
-#
-#    # Upload Artifact Build
-#    # Noted For Output [main_project_module]/build/outputs/apk/debug/
-#    - name: Upload APK Debug - ${{ env.repository_name }}
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - APK(s) debug generated
-#        path: ${{ env.main_project_module }}/build/outputs/apk/debug/
+#      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} ${{ env.main_project_module }}:bundleRelease
 
-#    # Noted For Output [main_project_module]/build/outputs/apk/release/
-#    - name: Upload APK Release - ${{ env.repository_name }}
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - APK(s) release generated
-#        path: ${{ env.main_project_module }}/build/outputs/apk/release/
+    # Upload Artifact Build
+    # Noted For Output [main_project_module]/build/outputs/apk/debug/
+    - name: Upload APK Debug - ${{ env.repository_name }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - APK(s) debug generated
+        path: ${{ env.main_project_module }}/build/outputs/apk/debug/
+
+    # Noted For Output [main_project_module]/build/outputs/apk/release/
+    - name: Upload APK Release - ${{ env.repository_name }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - APK(s) release generated
+        path: ${{ env.main_project_module }}/build/outputs/apk/release/
 
 #    # Noted For Output [main_project_module]/build/outputs/bundle/release/
 #    - name: Upload AAB (App Bundle) Release - ${{ env.repository_name }}
@@ -96,4 +102,4 @@ jobs:
 #      with:
 #        name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - App bundle(s) AAB release generated
 #        path: ${{ env.main_project_module }}/build/outputs/bundle/release/
-#
+
