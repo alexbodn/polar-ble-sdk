@@ -33,7 +33,7 @@ jobs:
     
     # set main project module
     - name: set main_project_module
-      run: echo "main_project_module=${{ env.proj_loc }}/app" >> @GITHUB_ENV
+      run: echo "main_project_module=./examples/example-android/androidBleSdkTestApp/app" >> $GITHUB_ENV
 
     - name: set up JDK 11
       uses: actions/setup-java@v3
