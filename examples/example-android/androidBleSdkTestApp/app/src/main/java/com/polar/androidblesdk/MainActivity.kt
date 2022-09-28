@@ -761,6 +761,22 @@ class MainActivity : AppCompatActivity() {
         toast.show()
 
     }
+    
+    // Request code for creating a PDF document.
+    const val CREATE_FILE = 1
+
+    private fun createFile(pickerInitialUri: Uri) {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, "sample.txt")
+
+            // Optionally, specify a URI for the directory that should be opened in
+            // the system file picker before your app creates the document.
+            putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri)
+        }
+        startActivityForResult(intent, CREATE_FILE)
+    }
 
     private fun showSnackbar(message: String) {
         val contextView = findViewById<View>(R.id.buttons_container)
