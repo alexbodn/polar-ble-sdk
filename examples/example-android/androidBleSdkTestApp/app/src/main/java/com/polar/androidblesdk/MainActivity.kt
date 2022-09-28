@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import android.content.Intent
+import android.content.Uri
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +35,7 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
         private const val API_LOGGER_TAG = "API LOGGER"
         private const val PERMISSION_REQUEST_CODE = 1
+        private const val CREATE_FILE = 1
     }
 
     // ATTENTION! Replace with the device ID from your device.
@@ -764,8 +766,6 @@ class MainActivity : AppCompatActivity() {
     }
     
     // Request code for creating a PDF document.
-    const val CREATE_FILE = 1
-
     private fun createFile(pickerInitialUri: Uri) {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
