@@ -800,18 +800,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
-    override fun onActivityResult(
-            requestCode: Int, resultCode: Int, resultData: Intent?) {
-        if (requestCode == your-request-code
-                && resultCode == Activity.RESULT_OK) {
-            // The result data contains a URI for the document or directory that
-            // the user selected.
-            resultData?.data?.also { uri ->
-                // Perform operations on the document using its URI.
-            }
-        }
-    }
-
     private fun showSnackbar(message: String) {
         val contextView = findViewById<View>(R.id.buttons_container)
         Snackbar.make(contextView, message, Snackbar.LENGTH_LONG)
