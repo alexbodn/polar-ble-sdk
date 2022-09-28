@@ -766,7 +766,7 @@ class MainActivity : AppCompatActivity() {
 
     }
     
-    // Request code for creating a PDF document.
+    // Request code for creating a TXT document.
     private fun createFile(pickerInitialUri: Uri) {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -778,6 +778,38 @@ class MainActivity : AppCompatActivity() {
             putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri)
         }
         startActivityForResult(intent, CREATE_FILE)
+    }
+    
+    val contentResolver = applicationContext.contentResolver
+
+    // save a document file
+    private fun alterDocument(uri: Uri) {
+        try {
+            contentResolver.openFileDescriptor(uri, "w")?.use {
+                FileOutputStream(it.fileDescriptor).use {
+                    it.write(
+                        ("Overwritten at ${System.currentTimeMillis()}\n")
+                            .toByteArray()
+                    )
+                }
+            }
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
+    
+    override fun onActivityResult(
+            requestCode: Int, resultCode: Int, resultData: Intent?) {
+        if (requestCode == your-request-code
+                && resultCode == Activity.RESULT_OK) {
+            // The result data contains a URI for the document or directory that
+            // the user selected.
+            resultData?.data?.also { uri ->
+                // Perform operations on the document using its URI.
+            }
+        }
     }
 
     private fun showSnackbar(message: String) {
