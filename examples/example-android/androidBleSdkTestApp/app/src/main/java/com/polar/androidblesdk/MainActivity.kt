@@ -18,12 +18,10 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.util.Pair
 import com.google.android.material.snackbar.Snackbar
 import com.polar.sdk.api.PolarBleApi
-import com.polar.sdk.api.PolarBleApi.DeviceStreamingFeature
 import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.errors.PolarInvalidArgument
 import com.polar.sdk.api.model.*
-
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Single
@@ -40,7 +38,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ATTENTION! Replace with the device ID from your device.
-    private var deviceId = "8C4CAD2D"
+    private var deviceId = "ACF7222C"
 
     private val api: PolarBleApi by lazy {
         // Notice PolarBleApi.ALL_FEATURES are enabled
@@ -84,6 +82,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stopH10RecordingButton: Button
     private lateinit var readH10RecordingStatusButton: Button
     private lateinit var setTimeButton: Button
+    private lateinit var getTimeButton: Button
     private lateinit var toggleSdkModeButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         stopH10RecordingButton = findViewById(R.id.stop_h10_recording)
         readH10RecordingStatusButton = findViewById(R.id.h10_recording_status)
         setTimeButton = findViewById(R.id.set_time)
+        getTimeButton = findViewById(R.id.get_time)
         toggleSdkModeButton = findViewById(R.id.toggle_SDK_mode)
 
         api.setPolarFilter(false)
@@ -125,7 +125,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d(TAG, "CONNECTED: " + polarDeviceInfo.deviceId)
+                Log.d(TAG, "CONNECTED: ${polarDeviceInfo.deviceId}")
                 deviceId = polarDeviceInfo.deviceId
                 deviceConnected = true
                 val buttonText = getString(R.string.disconnect_from_device, deviceId)
@@ -133,20 +133,18 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d(TAG, "CONNECTING: " + polarDeviceInfo.deviceId)
+                Log.d(TAG, "CONNECTING: ${polarDeviceInfo.deviceId}")
             }
 
             override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
-                Log.d(TAG, "DISCONNECTED: " + polarDeviceInfo.deviceId)
+                Log.d(TAG, "DISCONNECTED: ${polarDeviceInfo.deviceId}")
                 deviceConnected = false
                 val buttonText = getString(R.string.connect_to_device, deviceId)
                 toggleButtonUp(connectButton, buttonText)
                 toggleButtonUp(toggleSdkModeButton, R.string.enable_sdk_mode)
             }
 
-            override fun streamingFeaturesReady(
-                identifier: String, features: Set<DeviceStreamingFeature>
-            ) {
+            override fun streamingFeaturesReady(identifier: String, features: Set<PolarBleApi.DeviceStreamingFeature>) {
                 for (feature in features) {
                     Log.d(TAG, "Streaming feature $feature is ready")
                 }
@@ -158,7 +156,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
-                Log.d(TAG, "uuid: $uuid value: $value")
+                Log.d(TAG, "DIS INFO uuid: $uuid value: $value")
             }
 
             override fun batteryLevelReceived(identifier: String, level: Int) {
@@ -169,7 +167,7 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "HR value: ${data.hr} rrsMs: ${data.rrsMs} rr: ${data.rrs} contact: ${data.contactStatus} , ${data.contactStatusSupported}")
             }
 
-            override fun polarFtpFeatureReady(s: String) {
+            override fun polarFtpFeatureReady(identifier: String) {
                 Log.d(TAG, "FTP ready")
             }
         })
@@ -252,14 +250,14 @@ class MainActivity : AppCompatActivity() {
             val isDisposed = ecgDisposable?.isDisposed ?: true
             if (isDisposed) {
                 toggleButtonDown(ecgButton, R.string.stop_ecg_stream)
-                ecgDisposable = requestStreamSettings(deviceId, DeviceStreamingFeature.ECG)
+                ecgDisposable = requestStreamSettings(deviceId, PolarBleApi.DeviceStreamingFeature.ECG)
                     .flatMap { settings: PolarSensorSetting ->
                         api.startEcgStreaming(deviceId, settings)
                     }
                     .subscribe(
                         { polarEcgData: PolarEcgData ->
-                            for (microVolts in polarEcgData.samples) {
-                                Log.d(TAG, "    yV: $microVolts")
+                            for (data in polarEcgData.samples) {
+                                Log.d(TAG, "    yV: ${data.voltage} timeStamp: ${data.timeStamp}")
                             }
                         },
                         { error: Throwable ->
@@ -279,7 +277,7 @@ class MainActivity : AppCompatActivity() {
             val isDisposed = accDisposable?.isDisposed ?: true
             if (isDisposed) {
                 toggleButtonDown(accButton, R.string.stop_acc_stream)
-                accDisposable = requestStreamSettings(deviceId, DeviceStreamingFeature.ACC)
+                accDisposable = requestStreamSettings(deviceId, PolarBleApi.DeviceStreamingFeature.ACC)
                     .flatMap { settings: PolarSensorSetting ->
                         api.startAccStreaming(deviceId, settings)
                     }
@@ -287,7 +285,7 @@ class MainActivity : AppCompatActivity() {
                     .subscribe(
                         { polarAccelerometerData: PolarAccelerometerData ->
                             for (data in polarAccelerometerData.samples) {
-                                Log.d(TAG, "ACC    x: ${data.x} y:  ${data.y} z: ${data.z}")
+                                Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                             }
                         },
                         { error: Throwable ->
@@ -311,7 +309,7 @@ class MainActivity : AppCompatActivity() {
             if (isDisposed) {
                 toggleButtonDown(gyrButton, R.string.stop_gyro_stream)
                 gyrDisposable =
-                    requestStreamSettings(deviceId, DeviceStreamingFeature.GYRO)
+                    requestStreamSettings(deviceId, PolarBleApi.DeviceStreamingFeature.GYRO)
                         .flatMap { settings: PolarSensorSetting ->
                             api.startGyroStreaming(deviceId, settings)
                         }
@@ -319,7 +317,7 @@ class MainActivity : AppCompatActivity() {
                         .subscribe(
                             { polarGyroData: PolarGyroData ->
                                 for (data in polarGyroData.samples) {
-                                    Log.d(TAG, "GYR    x: ${data.x} y:  ${data.y} z: ${data.z}")
+                                    Log.d(TAG, "GYR    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                                 }
                             },
                             { error: Throwable ->
@@ -340,7 +338,7 @@ class MainActivity : AppCompatActivity() {
             if (isDisposed) {
                 toggleButtonDown(magButton, R.string.stop_mag_stream)
                 magDisposable =
-                    requestStreamSettings(deviceId, DeviceStreamingFeature.MAGNETOMETER)
+                    requestStreamSettings(deviceId, PolarBleApi.DeviceStreamingFeature.MAGNETOMETER)
                         .flatMap { settings: PolarSensorSetting ->
                             api.startMagnetometerStreaming(deviceId, settings)
                         }
@@ -348,7 +346,7 @@ class MainActivity : AppCompatActivity() {
                         .subscribe(
                             { polarMagData: PolarMagnetometerData ->
                                 for (data in polarMagData.samples) {
-                                    Log.d(TAG, "MAG    x: ${data.x} y:  ${data.y} z: ${data.z}")
+                                    Log.d(TAG, "MAG    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
                                 }
                             },
                             { error: Throwable ->
@@ -369,15 +367,15 @@ class MainActivity : AppCompatActivity() {
             if (isDisposed) {
                 toggleButtonDown(ppgButton, R.string.stop_ppg_stream)
                 ppgDisposable =
-                    requestStreamSettings(deviceId, DeviceStreamingFeature.PPG)
+                    requestStreamSettings(deviceId, PolarBleApi.DeviceStreamingFeature.PPG)
                         .flatMap { settings: PolarSensorSetting ->
                             api.startOhrStreaming(deviceId, settings)
                         }
                         .subscribe(
                             { polarOhrPPGData: PolarOhrData ->
-                                if (polarOhrPPGData.type == PolarOhrData.OHR_DATA_TYPE.PPG3_AMBIENT1) {
+                                if (polarOhrPPGData.type == PolarOhrData.OhrDataType.PPG3_AMBIENT1) {
                                     for (data in polarOhrPPGData.samples) {
-                                        Log.d(TAG, "PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]}")
+                                        Log.d(TAG, "PPG    ppg0: ${data.channelSamples[0]} ppg1: ${data.channelSamples[1]} ppg2: ${data.channelSamples[2]} ambient: ${data.channelSamples[3]} timeStamp: ${data.timeStamp}")
                                     }
                                 }
                             },
@@ -450,9 +448,13 @@ class MainActivity : AppCompatActivity() {
             val isDisposed = fetchExerciseDisposable?.isDisposed ?: true
             if (isDisposed) {
                 if (exerciseEntries.isNotEmpty()) {
+                    toggleButtonDown(fetchExerciseButton, R.string.reading_exercise)
                     // just for the example purpose read the entry which is first on the exerciseEntries list
                     fetchExerciseDisposable = api.fetchExercise(deviceId, exerciseEntries.first())
                         .observeOn(AndroidSchedulers.mainThread())
+                        .doFinally {
+                            toggleButtonUp(fetchExerciseButton, R.string.read_exercise)
+                        }
                         .subscribe(
                             { polarExerciseData: PolarExerciseData ->
                                 Log.d(TAG, "Exercise data count: ${polarExerciseData.hrSamples.size} samples: ${polarExerciseData.hrSamples}")
@@ -564,7 +566,6 @@ class MainActivity : AppCompatActivity() {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                         { pair: Pair<Boolean, String> ->
-
                             val recordingOn = pair.first
                             val recordingId = pair.second
 
@@ -601,9 +602,28 @@ class MainActivity : AppCompatActivity() {
             val calendar = Calendar.getInstance()
             calendar.time = Date()
             api.setLocalTime(deviceId, calendar)
+                .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                    { Log.d(TAG, "time ${calendar.time} set to device") },
+                    {
+                        val timeSetString = "time ${calendar.time} set to device"
+                        Log.d(TAG, timeSetString)
+                        showToast(timeSetString)
+                    },
                     { error: Throwable -> Log.e(TAG, "set time failed: $error") }
+                )
+        }
+
+        getTimeButton.setOnClickListener {
+            api.getLocalTime(deviceId)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    { calendar ->
+                        val timeGetString = "${calendar.time} read from the device"
+                        Log.d(TAG, timeGetString)
+                        showToast(timeGetString)
+
+                    },
+                    { error: Throwable -> Log.e(TAG, "get time failed: $error") }
                 )
         }
 
@@ -720,22 +740,11 @@ class MainActivity : AppCompatActivity() {
         button.background = buttonDrawable
     }
 
-    private fun requestStreamSettings(identifier: String, feature: DeviceStreamingFeature): Flowable<PolarSensorSetting> {
-
+    private fun requestStreamSettings(identifier: String, feature: PolarBleApi.DeviceStreamingFeature): Flowable<PolarSensorSetting> {
         val availableSettings = api.requestStreamSettings(identifier, feature)
-            .observeOn(AndroidSchedulers.mainThread())
-            .onErrorReturn { error: Throwable ->
-                val errorString = "Settings are not available for feature $feature. REASON: $error"
-                Log.w(TAG, errorString)
-                showToast(errorString)
-                PolarSensorSetting(emptyMap())
-            }
         val allSettings = api.requestFullStreamSettings(identifier, feature)
             .onErrorReturn { error: Throwable ->
-                Log.w(
-                    TAG,
-                    "Full stream settings are not available for feature $feature. REASON: $error"
-                )
+                Log.w(TAG, "Full stream settings are not available for feature $feature. REASON: $error")
                 PolarSensorSetting(emptyMap())
             }
         return Single.zip(availableSettings, allSettings) { available: PolarSensorSetting, all: PolarSensorSetting ->
@@ -763,7 +772,6 @@ class MainActivity : AppCompatActivity() {
     private fun showToast(message: String) {
         val toast = Toast.makeText(applicationContext, message, Toast.LENGTH_LONG)
         toast.show()
-
     }
     
     // Request code for creating a TXT document.
@@ -834,6 +842,7 @@ class MainActivity : AppCompatActivity() {
         stopH10RecordingButton.isEnabled = false
         readH10RecordingStatusButton.isEnabled = false
         setTimeButton.isEnabled = false
+        getTimeButton.isEnabled = false
         toggleSdkModeButton.isEnabled = false
     }
 
@@ -855,6 +864,7 @@ class MainActivity : AppCompatActivity() {
         stopH10RecordingButton.isEnabled = true
         readH10RecordingStatusButton.isEnabled = true
         setTimeButton.isEnabled = true
+        getTimeButton.isEnabled = true
         toggleSdkModeButton.isEnabled = true
     }
 

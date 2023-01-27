@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|  
     s.name              = 'PolarBleSdk'
-    s.version           = '3.3.0'
+    s.version           = '4.0.0'
     s.summary           = 'SDK for Polar sensors'
     s.homepage          = 'https://github.com/polarofficial/polar-ble-sdk'
     s.license           = { :type => 'Custom', :file => 'Polar_SDK_License.txt' }
@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
     s.cocoapods_version = '>= 1.10'
     s.source            = { :git => 'https://github.com/polarofficial/polar-ble-sdk.git', :tag => s.version.to_s }
 
-    s.ios.deployment_target = '13.0'
+    s.ios.deployment_target = '14.0'
     
     s.source_files = 'sources/iOS/ios-communications/Sources/**/*.swift'
 

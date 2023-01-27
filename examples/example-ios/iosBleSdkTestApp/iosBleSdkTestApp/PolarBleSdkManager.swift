@@ -41,8 +41,8 @@ class PolarBleSdkManager : ObservableObject {
     @Published private(set) var isFtpFeatureSupported: Bool = false
     @Published private(set) var isH10RecordingSupported: Bool = false
     @Published private(set) var isH10RecordingEnabled: Bool = false
+    @Published private(set) var isExerciseFetchInProgress: Bool = false
     @Published var streamSettings: StreamSettings? = nil
-    @Published var generalError: Message? = nil
     @Published var generalMessage: Message? = nil
     
     private var broadcastDisposable: Disposable?
@@ -163,7 +163,6 @@ class PolarBleSdkManager : ObservableObject {
                             for settingsValue in setting.value {
                                 values.append(Int(settingsValue))
                             }
-                            NSLog("TESTING, received setting key \(setting.key) and values \(values)")
                             receivedSettings.append(StreamSetting(type: setting.key, values: values))
                         }
                         
@@ -247,8 +246,8 @@ class PolarBleSdkManager : ObservableObject {
                 .subscribe{ e in
                     switch e {
                     case .next(let data):
-                        for µv in data.samples {
-                            NSLog("ECG    µV: \(µv)")
+                        for item in data.samples {
+                            NSLog("ECG    µV: \(item.voltage) timeStamp: \(item.timeStamp)")
                         }
                     case .error(let err):
                         NSLog("ECG stream failed: \(err)")
@@ -278,7 +277,7 @@ class PolarBleSdkManager : ObservableObject {
                     switch e {
                     case .next(let data):
                         for item in data.samples {
-                            NSLog("ACC    x: \(item.x) y: \(item.y) z: \(item.z)")
+                            NSLog("ACC    x: \(item.x) y: \(item.y) z: \(item.z) timeStamp: \(item.timeStamp)")
                         }
                     case .error(let err):
                         NSLog("ACC stream failed: \(err)")
@@ -308,7 +307,7 @@ class PolarBleSdkManager : ObservableObject {
                     switch e {
                     case .next(let data):
                         for item in data.samples {
-                            NSLog("MAG    x: \(item.x) y: \(item.y) z: \(item.z)")
+                            NSLog("MAG    x: \(item.x) y: \(item.y) z: \(item.z) timeStamp: \(item.timeStamp)")
                         }
                     case .error(let err):
                         NSLog("MAG stream failed: \(err)")
@@ -337,7 +336,7 @@ class PolarBleSdkManager : ObservableObject {
                     switch e {
                     case .next(let data):
                         for item in data.samples {
-                            NSLog("GYR    x: \(item.x) y: \(item.y) z: \(item.z)")
+                            NSLog("GYR    x: \(item.x) y: \(item.y) z: \(item.z) timeStamp: \(item.timeStamp)")
                         }
                     case .error(let err):
                         NSLog("GYR stream failed: \(err)")
@@ -367,7 +366,7 @@ class PolarBleSdkManager : ObservableObject {
                     case .next(let data):
                         if(data.type == OhrDataType.ppg3_ambient1) {
                             for item in data.samples {
-                                NSLog("PPG    ppg0: \(item[0]) ppg1: \(item[1]) ppg2: \(item[2]) ambient: \(item[3])")
+                                NSLog("PPG  ppg0: \(item.channelSamples[0]) ppg1: \(item.channelSamples[1]) ppg2: \(item.channelSamples[2]) ambient: \(item.channelSamples[3]) timeStamp: \(item.timeStamp)")
                             }
                         }
                     case .error(let err):
@@ -475,16 +474,22 @@ class PolarBleSdkManager : ObservableObject {
                 somethingFailed(text: "No exercise to read, please list the exercises first")
                 return
             }
-            api.fetchExercise(deviceId, entry: e)
-                .observe(on: MainScheduler.instance)
-                .subscribe{ e in
-                    switch e {
-                    case .failure(let err):
-                        NSLog("failed to read exercises: \(err)")
-                    case .success(let data):
-                        NSLog("exercise data count: \(data.samples.count) samples: \(data.samples)")
-                    }
-                }.disposed(by: disposeBag)
+            if(!isExerciseFetchInProgress) {
+                isExerciseFetchInProgress = true
+                api.fetchExercise(deviceId, entry: e)
+                    .observe(on: MainScheduler.instance)
+                    .do(onDispose: { self.isExerciseFetchInProgress = false})
+                    .subscribe{ e in
+                        switch e {
+                        case .failure(let err):
+                            NSLog("failed to read exercises: \(err)")
+                        case .success(let data):
+                            NSLog("exercise data count: \(data.samples.count) samples: \(data.samples)")
+                        }
+                    }.disposed(by: disposeBag)
+            } else {
+                NSLog("Reading of exercise is in progress at the moment.")
+            }
         }
     }
     
@@ -584,8 +589,26 @@ class PolarBleSdkManager : ObservableObject {
         }
     }
     
+    func getTime() {
+        if case .connected(let deviceId) = deviceConnectionState {
+            api.getLocalTime(deviceId)
+                .observe(on: MainScheduler.instance)
+                .subscribe{ e in
+                    switch e {
+                    case .success(let date):
+                        let formatter = DateFormatter()
+                        formatter.dateStyle = .short
+                        formatter.timeStyle = .medium
+                        self.generalMessage = Message(text: "\(formatter.string(from: date)) read from the device \(deviceId)")
+                    case .failure(let err):
+                        self.somethingFailed(text: "time get failed: \(err)")
+                    }
+                }.disposed(by: disposeBag)
+        }
+    }
+    
     private func somethingFailed(text: String) {
-        generalError = Message(text:text)
+        self.generalMessage = Message(text: "Error: \(text)")
         NSLog("Error \(text)")
     }
 }
@@ -607,11 +630,13 @@ extension PolarBleSdkManager : PolarBleApiPowerStateObserver {
 extension PolarBleSdkManager : PolarBleApiObserver {
     func deviceConnecting(_ polarDeviceInfo: PolarDeviceInfo) {
         NSLog("DEVICE CONNECTING: \(polarDeviceInfo)")
+        
         deviceConnectionState = ConnectionState.connecting(polarDeviceInfo.deviceId)
     }
     
     func deviceConnected(_ polarDeviceInfo: PolarDeviceInfo) {
         NSLog("DEVICE CONNECTED: \(polarDeviceInfo)")
+        
         if(polarDeviceInfo.name.contains("H10")){
             self.isH10RecordingSupported = true
             getH10RecordingStatus()
@@ -621,6 +646,7 @@ extension PolarBleSdkManager : PolarBleApiObserver {
     
     func deviceDisconnected(_ polarDeviceInfo: PolarDeviceInfo) {
         NSLog("DISCONNECTED: \(polarDeviceInfo)")
+        
         deviceConnectionState = ConnectionState.disconnected
         self.isSdkStreamModeEnabled = false
         self.isSdkFeatureSupported = false
@@ -641,7 +667,7 @@ extension PolarBleSdkManager : PolarBleApiDeviceInfoObserver {
     }
 }
 
-// MARK: - PolarBleApiSdkModeFeatureObserver
+// MARK: - PolarBleApiDeviceFeaturesObserver
 extension PolarBleSdkManager : PolarBleApiDeviceFeaturesObserver {
     func hrFeatureReady(_ identifier: String) {
         NSLog("HR ready")
