@@ -1,8 +1,12 @@
 package com.polar.androidcommunications.api.ble.model.gatt.client.pmd
 
 class PmdControlPointResponse(data: ByteArray) {
+    companion object {
+        const val CONTROL_POINT_RESPONSE_CODE = 0xF0.toByte()
+    }
+
     val responseCode: Byte = data[0]
-    val opCode: PmdControlPointCommand = PmdControlPointCommand.values()[data[1].toInt()]
+    val opCode: PmdControlPointCommandClientToService = PmdControlPointCommandClientToService.values()[data[1].toInt()]
     val measurementType: Byte = data[2]
     val status: PmdControlPointResponseCode = PmdControlPointResponseCode.values()[data[3].toInt()]
     val more: Boolean
@@ -22,7 +26,8 @@ class PmdControlPointResponse(data: ByteArray) {
         ERROR_INVALID_MTU(10),
         ERROR_INVALID_NUMBER_OF_CHANNELS(11),
         ERROR_INVALID_STATE(12),
-        ERROR_DEVICE_IN_CHARGER(13);
+        ERROR_DEVICE_IN_CHARGER(13),
+        ERROR_DISK_FULL(14);
     }
 
     init {

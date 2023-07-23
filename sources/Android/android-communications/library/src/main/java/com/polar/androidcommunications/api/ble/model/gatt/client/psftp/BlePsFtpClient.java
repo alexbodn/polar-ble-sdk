@@ -49,7 +49,7 @@ public class BlePsFtpClient extends BleGattBase {
     private final AtomicBoolean notificationWaiting = new AtomicBoolean(false);
     private final AtomicInteger notificationPacketsWritten = new AtomicInteger(0);
     private final AtomicInteger packetsCount = new AtomicInteger(5); // default every 5th packet is written with response
-    private static final int PROTOCOL_TIMEOUT = 30;
+    private static final int PROTOCOL_TIMEOUT_SECONDS = 90;
 
     /**
      * true  = uses attribute operation WRITE
@@ -266,7 +266,7 @@ public class BlePsFtpClient extends BleGattBase {
                 synchronized (written) {
                     if (written.get() != count) {
                         int was = written.get();
-                        written.wait(PROTOCOL_TIMEOUT * 1000);
+                        written.wait(PROTOCOL_TIMEOUT_SECONDS * 1000);
                         if (was == written.get()) {
                             if (!txInterface.isConnected()) {
                                 throw new BleDisconnected("Connection lost during waiting packets to be written");
@@ -415,7 +415,7 @@ public class BlePsFtpClient extends BleGattBase {
                 }
                 txInterface.transmitMessages(BlePsFtpUtils.RFC77_PFTP_SERVICE, BlePsFtpUtils.RFC77_PFTP_MTU_CHARACTERISTIC, Collections.singletonList(cancelPacket), useAttributeLevelResponse.get());
                 waitPacketsWritten(packetsWritten, mtuWaiting, 1);
-                BleLogger.d(TAG, "Stream cancel has been successfully send");
+                BleLogger.d(TAG, "MTU interrupted. Stream cancel has been successfully send");
             } catch (Throwable throwable) {
                 BleLogger.e(TAG, "Exception while trying to cancel streaming");
             }
@@ -562,7 +562,7 @@ public class BlePsFtpClient extends BleGattBase {
                                         notificationMessage.byteArrayOutputStream.write(response.payload, 1, response.payload.length - 1);
                                         int status = response.status;
                                         while (status == BlePsFtpUtils.RFC76_STATUS_MORE) {
-                                            packet = notificationInputQueue.poll(PROTOCOL_TIMEOUT, TimeUnit.SECONDS);
+                                            packet = notificationInputQueue.poll(PROTOCOL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                                             if (packet != null && packet.second == 0) {
                                                 response = BlePsFtpUtils.processRfc76MessageFrameHeader(packet.first);
                                                 status = response.status;
@@ -626,7 +626,7 @@ public class BlePsFtpClient extends BleGattBase {
             if (txInterface.isConnected()) {
                 synchronized (mtuInputQueue) {
                     if (mtuInputQueue.isEmpty()) {
-                        mtuInputQueue.wait(PROTOCOL_TIMEOUT * 1000L);
+                        mtuInputQueue.wait(PROTOCOL_TIMEOUT_SECONDS * 1000L);
                     }
                 }
             } else {
@@ -641,7 +641,7 @@ public class BlePsFtpClient extends BleGattBase {
                         byte[] cancelPacket = new byte[]{0x00, 0x00, 0x00};
                         txInterface.transmitMessages(BlePsFtpUtils.RFC77_PFTP_SERVICE, BlePsFtpUtils.RFC77_PFTP_MTU_CHARACTERISTIC, Collections.singletonList(cancelPacket), true);
                         waitPacketsWritten(packetsWritten, mtuWaiting, 1);
-                        BleLogger.d(TAG, "Stream cancel has been successfully send");
+                        BleLogger.d(TAG, "Sequence number mismatch. Stream cancel has been successfully send");
                     }
                     throw new BlePsFtpUtils.PftpResponseError("Air packet lost!", 303);
                 }

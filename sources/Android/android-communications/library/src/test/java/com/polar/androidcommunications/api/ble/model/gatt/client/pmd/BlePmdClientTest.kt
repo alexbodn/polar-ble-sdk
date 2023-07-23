@@ -1,6 +1,7 @@
 package com.polar.androidcommunications.api.ble.model.gatt.client.pmd
 
 import com.polar.androidcommunications.api.ble.exceptions.BleNotImplemented
+import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.errors.BleOnlineStreamClosed
 import com.polar.androidcommunications.api.ble.model.gatt.BleGattTxInterface
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.model.*
 import com.polar.androidcommunications.testrules.BleLoggerTestRule
@@ -62,6 +63,91 @@ internal class BlePmdClientTest {
         assertThrows(BleNotImplemented::class.java) {
             blePmdClient.processServiceData(BlePMDClient.PMD_DATA, locationDataFromService, 0, false)
         }
+    }
+
+    @Test
+    fun `process control point response when status is success`() {
+        // Arrange
+        // HEX: F0 01 00 00 00 00 00 00 70 FF
+        // index    type                                data
+        // 0:      Response code                        F0
+        // 1...:   Data                                 01 00 00 00 00 00 00 70 FF
+
+        val controlPointResponse = byteArrayOf(
+            0xF0.toByte(),
+            0x01.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x70.toByte(), 0xFF.toByte()
+        )
+        val successStatusCode = 0x00
+        // Act
+        blePmdClient.processServiceData(BlePMDClient.PMD_CP, controlPointResponse, successStatusCode, true)
+
+        // Assert
+        val (data, status) = blePmdClient.pmdCpResponseQueue.take()
+        Assert.assertEquals(successStatusCode, status)
+        Assert.assertArrayEquals(controlPointResponse, data)
+    }
+
+    @Test
+    fun `process control point response when status is fail`() {
+        // Arrange
+        // HEX: F0 01 00 00 00 00 00 00 70 FF
+        // index    type                                data
+        // 0:      Response code                        F0
+        // 1...:   Data                                 01 00 00 00 00 00 00 70 FF
+        val controlPointResponse = byteArrayOf()
+        val someRandomFailureStatusCode = 0x11
+
+        // Act
+        blePmdClient.processServiceData(BlePMDClient.PMD_CP, controlPointResponse, someRandomFailureStatusCode, true)
+
+        // Assert
+        val (data, status) = blePmdClient.pmdCpResponseQueue.take()
+        Assert.assertEquals(someRandomFailureStatusCode, status)
+        Assert.assertArrayEquals(controlPointResponse, data)
+    }
+
+    @Test
+    fun `process measurement stop control point command from service no content`() {
+        // Arrange
+        // HEX: 01
+        // index    type                                data
+        // 0:      Online Measurement Stopped           01
+        // 1...:   Measurement types                    <Empty>
+        val controlPointResponse = byteArrayOf(0x01.toByte())
+        val successStatusCode = 0x00
+
+        // Act & Assert
+        //should not throw an exception
+        blePmdClient.processServiceData(BlePMDClient.PMD_CP, controlPointResponse, successStatusCode, true)
+    }
+
+    @Test
+    fun `process measurement stop control point command`() {
+        // Arrange
+        // HEX: 01
+        // index    type                                data
+        // 0:      Online Measurement Stopped           01
+        // 1...:   Measurement types                    01, 02
+        val controlPointResponse = byteArrayOf(0x01.toByte(), 0x01.toByte(), 0x02.toByte())
+        val successStatusCode = 0x00
+
+        val testObserverPpg = TestSubscriber<PpgData>()
+        val testObserverAcc = TestSubscriber<AccData>()
+        val testObserverPpi = TestSubscriber<PpiData>()
+        blePmdClient.monitorPpgNotifications(false).subscribe(testObserverPpg)
+        blePmdClient.monitorAccNotifications(false).subscribe(testObserverAcc)
+        blePmdClient.monitorPpiNotifications(false).subscribe(testObserverPpi)
+
+        // Act
+        blePmdClient.processServiceData(BlePMDClient.PMD_CP, controlPointResponse, successStatusCode, true)
+
+        //Assert
+        testObserverPpg.assertError(BleOnlineStreamClosed::class.java)
+        testObserverPpg.assertNoValues()
+        testObserverAcc.assertError(BleOnlineStreamClosed::class.java)
+        testObserverAcc.assertNoValues()
+        testObserverPpi.assertNoErrors()
+        testObserverPpi.assertNoValues()
     }
 
     @Test
@@ -241,21 +327,21 @@ internal class BlePmdClientTest {
     @Test
     fun `process ppi data`() {
         // Arrange
-        // HEX: 03 00 00 00 00 00 00 00 00 03 00
+        // HEX: 03 00 00 00 00 00 00 00 00 00 00
         // index    type                                data
         // 0:      Measurement type                     03 (ppi data)
         // 1..8:   64-bit Timestamp                     00 00 00 00 00 00 00 00 (0x0000000000000000 = 0)
-        // 9:      Frame type                           03 (raw, frame type 3)
+        // 9:      Frame type                           00 (raw, frame type 0)
         // 10:     Data                                 00
         val expectedTimeStamp = 0uL
         val expectedIsCompressed = false
-        val expectedFrameType = PmdDataFrame.PmdDataFrameType.TYPE_3
+        val expectedFrameType = PmdDataFrame.PmdDataFrameType.TYPE_0
         val expectedFactor = 1.0f
 
         val ppiDataHeaderFromService = byteArrayOf(
             0x03.toByte(),
             0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-            0x03.toByte(),
+            0x00.toByte(),
         )
         val ppiDataPartFromService = byteArrayOf(
             0x00.toByte()
