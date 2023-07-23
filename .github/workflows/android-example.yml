@@ -98,6 +98,9 @@ jobs:
         SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} assemble
 
+    - name: find apk files after sign
+      run: find ${{ env.proj_loc }} -name "*apk*"
+
     # apk signing
   #  - name: Build Signed APK
   #    uses: victorbnl/build-signed-apk@main
