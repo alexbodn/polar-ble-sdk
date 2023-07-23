@@ -978,11 +978,11 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(intent, CREATE_FILE)
     }
     
-    val contentResolver = applicationContext.contentResolver
-
     // save a document file
     // do this later
     /*
+    val contentResolver = applicationContext.contentResolver
+
     private fun alterDocument(uri: Uri) {
         try {
             contentResolver.openFileDescriptor(uri, "w")?.use {
