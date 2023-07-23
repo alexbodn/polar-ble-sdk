@@ -981,6 +981,8 @@ class MainActivity : AppCompatActivity() {
     val contentResolver = applicationContext.contentResolver
 
     // save a document file
+    // do this later
+    /*
     private fun alterDocument(uri: Uri) {
         try {
             contentResolver.openFileDescriptor(uri, "w")?.use {
@@ -997,6 +999,7 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
     }
+    */
     
     private fun showSnackbar(message: String) {
         val contextView = findViewById<View>(R.id.buttons_container)
