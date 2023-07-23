@@ -88,6 +88,7 @@ jobs:
         keystore_password: ${{ secrets.keystore_password }}
         key_alias: ${{ secrets.key_alias }}
         key_password: ${{ secrets.key_password }}
+        gradlew_dir: ${{ env.proj_loc }}
 
 #    # Create Bundle AAB Release
 #    # Noted for main module build [main_project_module]:bundleRelease
