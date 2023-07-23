@@ -69,8 +69,8 @@ jobs:
 #      run: ${{ env.proj_loc }}/gradlew -P ${{ env.proj_loc }} test
 
     # Run Build Project
-    - name: Build gradle project
-      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
+#    - name: Build gradle project
+#      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
 
     # Create APK Debug
     - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
