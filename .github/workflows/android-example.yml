@@ -68,17 +68,26 @@ jobs:
 #    - name: Run gradle tests
 #      run: ${{ env.proj_loc }}/gradlew -P ${{ env.proj_loc }} test
 
-    # Run Build Project
-#    - name: Build gradle project
-#      run: ./examples/example-android/androidBleSdkTestApp/gradlew build
+     # Run Build Project
+     - name: Build gradle project
+       run: ./examples/example-android/androidBleSdkTestApp/gradlew build
 
-#    # Create APK Debug
-#    - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
-#      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} assembleDebug
+    # Create APK Debug
+    - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
+      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} assembleDebug
 
-#    # Create APK Release
-#    - name: Build apk release project (APK) - ${{ env.main_project_module }} module
-#      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} assemble
+    # Create APK Release
+    - name: Build apk release project (APK) - ${{ env.main_project_module }} module
+      run: ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} assemble
+
+    # apk signing
+    - name: Build Signed APK
+      uses: victorbnl/build-signed-apk@main
+      with:
+        keystore_b64: ${{ secrets.keystore }}
+        keystore_password: ${{ secrets.keystore_password }}
+        key_alias: ${{ secrets.key_alias }}
+        key_password: ${{ secrets.key_password }}
 
 #    # Create Bundle AAB Release
 #    # Noted for main module build [main_project_module]:bundleRelease
