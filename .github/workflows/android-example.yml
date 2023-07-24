@@ -126,7 +126,7 @@ jobs:
       with:
         name: ${{ env.repository_name }}-${{ env.playstore_name }}-${{ env.date_today }}-APK(s) debug generated
         path: 
-          ${{ env.main_project_module }}/build/outputs/apk/(debug|release)/
+          ${{ env.main_project_module }}/build/outputs/apk/**/
 
 #    # Noted For Output [main_project_module]/build/outputs/apk/release/
 #    - name: Upload APK Release - ${{ env.repository_name }}
