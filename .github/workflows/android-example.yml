@@ -53,11 +53,7 @@ jobs:
     # fill SIGNING_KEY_STORE_PATH
     - name: fill SIGNING_KEY_STORE_PATH
       run:
- #       echo "${{ secret.KEYSTORE_B64 }}" #| /usr/bin/base64 -d - > ${{ env.SIGNING_KEY_STORE_PATH }}
-        echo ${{ env.SIGNING_KEY_STORE_PATH }}
-        echo ${{ secrets.KEY_ALIAS }}
-        echo ${{ secrets.KEY_PASSWORD }}
-        echo ${{ secrets.KEYSTORE_PASSWORD }}
+        echo "${{ secret.KEYSTORE_B64 }}" | /usr/bin/base64 -d - > ${{ env.SIGNING_KEY_STORE_PATH }}
 
     # fill SIGNING_KEY_STORE_PATH
     - name: show SIGNING_KEY_STORE_PATH
