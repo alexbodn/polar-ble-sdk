@@ -88,12 +88,12 @@ jobs:
     # Create APK Debug
     - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
       run:
-        ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} -Pandroid.injected.signing.store.file=${{ env.SIGNING_KEY_STORE_PATH }} -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }} assembleDebug
+        ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} -Pandroid.injected.signing.store.file=${{ env.SIGNING_KEY_STORE_PATH }} -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }} assembleDebug
 
     # Create APK Release
     - name: Build apk release project (APK) - ${{ env.main_project_module }} module
       run:
-        ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} -Pandroid.injected.signing.store.file=${{ env.SIGNING_KEY_STORE_PATH }} -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }} assemble
+        ${{ env.proj_loc }}/gradlew -p ${{ env.proj_loc }} -Pandroid.injected.signing.store.file=${{ env.SIGNING_KEY_STORE_PATH }} -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }} assemble
 
     - name: find apk files after sign
       run: find ${{ env.proj_loc }} -name "*apk*"
